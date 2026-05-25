@@ -1,0 +1,171 @@
+{% extends 'seating/base.html' %}
+{% load static %}
+{% load seating_tags %}
+
+{% block title %}{{ exam.name }} - Exam Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Exam Header -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="card-title mb-0">
+                    <i class="fas fa-file-alt text-primary"></i> {{ exam.name }}
+                </h2>
+                <div>
+                    <a href="{% url 'allocate_seats' exam.id %}" class="btn btn-primary">
+                        <i class="fas fa-chair"></i> Allocate Seats
+                    </a>
+                    <button class="btn btn-info ms-2" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col-md-4">
+                    <p class="mb-1"><i class="fas fa-calendar"></i> <strong>Date:</strong> {{ exam.date }}</p>
+                    <p class="mb-1"><i class="fas fa-clock"></i> <strong>Time:</strong> {{ exam.start_time }} - {{ exam.end_time }}</p>
+                    <p class="mb-0"><i class="fas fa-user"></i> <strong>Created by:</strong> {{ exam.created_by.username }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Allocations -->
+    {% for room_name, data in room_allocations.items %}
+    <div class="card shadow mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-door-open text-primary"></i> {{ room_name }}
+                {% if data.invigilator %}
+                <small class="text-muted ms-2">
+                    <i class="fas fa-user-tie"></i> Invigilator: {{ data.invigilator.get_full_name|default:data.invigilator.username }}
+                </small>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="seating-grid" style="display: grid; grid-template-columns: repeat({{ data.room.columns }}, 1fr); gap: 10px; padding: 15px;">
+                {% for row in data.room.rows|times %}
+                    {% for col in data.room.columns|times %}
+                        {% get_seat data.allocations row col as seat %}
+                        <div class="seat-box {% if seat %}{% if seat.student.needs_accommodation %}seat-special{% else %}seat-occupied{% endif %}{% else %}seat-empty{% endif %}"
+                             data-bs-toggle="tooltip" 
+                             data-bs-placement="top"
+                             title="{% if seat %}{{ seat.student.roll_number }} - {{ seat.student.name }}{% if seat.student.needs_accommodation %} (Special Accommodation){% endif %}{% else %}Empty{% endif %}">
+                            {% if seat %}
+                            <small class="d-block text-truncate">{{ seat.student.roll_number }}</small>
+                            <small class="d-block text-truncate">{{ seat.student.name }}</small>
+                            <small class="d-block branch-code">{{ seat.student.branch.code }}</small>
+                            {% else %}
+                            <span class="empty-seat">Empty</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No seating allocations have been made yet.
+        <a href="{% url 'allocate_seats' exam.id %}" class="alert-link">Click here to allocate seats</a>.
+    </div>
+    {% endfor %}
+
+    <!-- Legend -->
+    <div class="card shadow">
+        <div class="card-body">
+            <h5 class="card-title"><i class="fas fa-info-circle"></i> Legend</h5>
+            <div class="d-flex gap-3">
+                <div><span class="legend-box seat-occupied"></span> Regular Seat</div>
+                <div><span class="legend-box seat-special"></span> Special Accommodation</div>
+                <div><span class="legend-box seat-empty"></span> Empty Seat</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.seating-grid {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.seat-box {
+    aspect-ratio: 1;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+    min-width: 60px;
+    min-height: 60px;
+    word-wrap: break-word;
+    overflow: hidden;
+}
+
+.seat-box:hover {
+    transform: scale(1.05);
+    z-index: 1;
+}
+
+.seat-occupied {
+    background-color: #4361ee;
+    color: white;
+}
+
+.seat-special {
+    background-color: #ef476f;
+    color: white;
+}
+
+.seat-empty {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+.branch-code {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+.legend-box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+
+
+function exportToExcel() {
+    window.location.href = "{% url 'export_excel' exam.id %}";
+}
+</script>
+{% endblock %} 

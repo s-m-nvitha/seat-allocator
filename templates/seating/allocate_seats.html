@@ -1,0 +1,199 @@
+{% extends 'seating/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Allocate Seats - {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fas fa-chair text-primary"></i>
+                    Allocate Seats
+                </h2>
+                
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-info-circle"></i> {{ exam.name }}
+                    </h5>
+                    <p class="mb-1">
+                        <i class="fas fa-calendar"></i> {{ exam.date }}<br>
+                        <i class="fas fa-clock"></i> {{ exam.start_time }} - {{ exam.end_time }}
+                    </p>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        {{ form|crispy }}
+                    </div>
+
+                    <div class="alert alert-warning mb-4">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle"></i> Important Notes
+                        </h5>
+                        <ul class="mb-0">
+                            <li>Exactly 2 branches will be mixed per room to ensure fair distribution</li>
+                            <li>Students from the same branch should not be seated beside each other by ignoring the gap columns</li>
+                            <li>One column gap will be maintained between students if enabled</li>
+                            <li>Students requiring accommodations will be given priority seating</li>
+                            <li>Room capacity limits will be strictly enforced</li>
+                            <li>While allocating seats, students roll number must be consecutive according to their branches</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'exam_detail' exam.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Exam
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-magic"></i> Generate Seating
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Seating Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContainer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.room-preview {
+    margin-bottom: 30px;
+}
+
+.room-preview h6 {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.seat-grid {
+    display: grid;
+    gap: 10px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 10px;
+}
+
+.preview-seat {
+    aspect-ratio: 1;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.branch-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const roomsSelect = document.getElementById('id_rooms');
+    const branchesSelect = document.getElementById('id_branches');
+    
+    // Update preview when selections change
+    roomsSelect.addEventListener('change', updatePreview);
+    branchesSelect.addEventListener('change', updatePreview);
+    
+    function updatePreview() {
+        const selectedRooms = Array.from(roomsSelect.selectedOptions).map(opt => ({
+            id: opt.value,
+            name: opt.text,
+            // You would typically get these from data attributes
+            rows: 5,
+            cols: 6
+        }));
+        
+        const selectedBranches = Array.from(branchesSelect.selectedOptions).map(opt => ({
+            id: opt.value,
+            name: opt.text,
+            color: getRandomColor()
+        }));
+        
+        if (selectedRooms.length && selectedBranches.length) {
+            showPreview(selectedRooms, selectedBranches);
+        }
+    }
+    
+    function showPreview(rooms, branches) {
+        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        const container = document.getElementById('previewContainer');
+        container.innerHTML = '';
+        
+        // Create room previews
+        rooms.forEach(room => {
+            const roomDiv = document.createElement('div');
+            roomDiv.className = 'room-preview';
+            
+            roomDiv.innerHTML = `
+                <h6>${room.name}</h6>
+                <div class="seat-grid" style="grid-template-columns: repeat(${room.cols}, 1fr)">
+                    ${Array(room.rows * room.cols).fill().map(() => `
+                        <div class="preview-seat"></div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.appendChild(roomDiv);
+        });
+        
+        // Add branch legend
+        const legendDiv = document.createElement('div');
+        legendDiv.className = 'mt-3';
+        legendDiv.innerHTML = `
+            <h6>Branch Legend</h6>
+            <div class="d-flex flex-wrap gap-3">
+                ${branches.map(branch => `
+                    <div>
+                        <span class="branch-indicator" style="background-color: ${branch.color}"></span>
+                        ${branch.name}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        container.appendChild(legendDiv);
+        
+        modal.show();
+    }
+    
+    function getRandomColor() {
+        const colors = [
+            '#4361ee', '#3a0ca3', '#7209b7', '#f72585',
+            '#4cc9f0', '#4895ef', '#560bad', '#b5179e'
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+});
+</script>
+{% endblock %} 

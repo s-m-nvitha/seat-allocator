@@ -1,0 +1,128 @@
+{% extends 'seating/base.html' %}
+
+{% block title %}Rooms - Exam Seating System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-4">
+        <i class="fas fa-door-open"></i> Rooms
+    </h1>
+    <a href="{% url 'room_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Room
+    </a>
+</div>
+
+<div class="row">
+    {% for room in rooms %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h5 class="card-title mb-0">{{ room.name }}</h5>
+                        {% if room.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Capacity</small>
+                                <strong>{{ room.capacity }} seats</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">Layout</small>
+                                <strong>{{ room.rows }}×{{ room.columns }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" 
+                                onclick="showRoomLayout('{{ room.id }}')">
+                            <i class="fas fa-th"></i> View Layout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-door-closed fa-3x text-muted mb-3"></i>
+                    <h5>No Rooms Added Yet</h5>
+                    <p class="text-muted mb-3">Start by adding your first room</p>
+                    <a href="{% url 'room_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Room
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Room Layout Modal -->
+<div class="modal fade" id="roomLayoutModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Room Layout</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="roomLayoutGrid" class="room-grid"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .room-grid {
+        display: grid;
+        gap: 10px;
+        padding: 20px;
+    }
+    
+    .seat {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showRoomLayout(roomId) {
+    fetch(`/api/rooms/${roomId}/layout/`)
+        .then(response => response.json())
+        .then(data => {
+            const grid = document.getElementById('roomLayoutGrid');
+            grid.style.gridTemplateColumns = `repeat(${data.columns}, 1fr)`;
+            grid.innerHTML = '';
+            
+            for (let row = 0; row < data.rows; row++) {
+                for (let col = 0; col < data.columns; col++) {
+                    const seat = document.createElement('div');
+                    seat.className = 'seat';
+                    seat.textContent = `${row+1},${col+1}`;
+                    grid.appendChild(seat);
+                }
+            }
+            
+            new bootstrap.Modal(document.getElementById('roomLayoutModal')).show();
+        });
+}
+</script>
+{% endblock %} 

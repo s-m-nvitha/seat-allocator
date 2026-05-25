@@ -1,0 +1,69 @@
+{% extends 'seating/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Upload Students - Exam Seating System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fas fa-upload text-primary"></i>
+                    Upload Students
+                </h2>
+
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <div class="alert alert-info mb-4">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-info-circle"></i> File Format Instructions
+                        </h5>
+                        <p class="mb-0">
+                            Upload a CSV or Excel file with the following columns:
+                        </p>
+                        <ul class="mb-0">
+                            <li>roll_number (required)</li>
+                            <li>name (required)</li>
+                            <li>branch_code (required if branch is not selected in the form)</li>
+                            <li>needs_accommodation (optional, default: false)</li>
+                            <li>accommodation_details (optional)</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-cloud-upload-alt"></i> Upload Students
+                        </button>
+                        <a href="#" class="btn btn-outline-secondary" onclick="downloadTemplate()">
+                            <i class="fas fa-download"></i> Download Template
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadTemplate() {
+    const csvContent = "roll_number,name,branch_code,needs_accommodation,accommodation_details\n" +
+                      "CS001,John Doe,CSE,false,\n" +
+                      "CS002,Jane Smith,EEE,true,\"Requires front row seating\"\n";
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'student_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,126 @@
+{% extends 'seating/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Room - Exam Seating System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h2 class="card-title text-center mb-4">
+                    <i class="fas fa-door-open text-primary"></i>
+                    {% if form.instance.pk %}
+                        Edit Room
+                    {% else %}
+                        Add New Room
+                    {% endif %}
+                </h2>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            {{ form.name|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.rows|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            {{ form.columns|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            {{ form.capacity|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-12 mb-4">
+                            {{ form.is_active|as_crispy_field }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'room_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Room
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Card -->
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Room Layout Preview</h5>
+                <div id="roomPreview" class="room-preview"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .room-preview {
+        display: grid;
+        gap: 5px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+    
+    .preview-seat {
+        aspect-ratio: 1;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rowsInput = document.getElementById('id_rows');
+    const colsInput = document.getElementById('id_columns');
+    const preview = document.getElementById('roomPreview');
+    
+    function updatePreview() {
+        const rows = parseInt(rowsInput.value) || 0;
+        const cols = parseInt(colsInput.value) || 0;
+        
+        preview.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        preview.innerHTML = '';
+        
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const seat = document.createElement('div');
+                seat.className = 'preview-seat';
+                seat.textContent = `${row+1},${col+1}`;
+                preview.appendChild(seat);
+            }
+        }
+    }
+    
+    rowsInput.addEventListener('input', updatePreview);
+    colsInput.addEventListener('input', updatePreview);
+    
+    // Initial preview
+    updatePreview();
+});
+</script>
+{% endblock %} 
